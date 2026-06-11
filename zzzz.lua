@@ -1,5 +1,6 @@
--- Rivals Mobile GUI + ESP + Super Aimbot (Delta Android)
--- Instant lock, infinite range, 360-degree FOV, hitscan precision
+-- Rivals Mobile GUI + ESP Box/Health + Smooth Aimbot (Delta Android)
+-- ESP: Box + Health bar only (no names)
+-- Aimbot: Camera + weapon alignment using mouse movement simulation
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,8 +10,8 @@ local LocalPlayer = Players.LocalPlayer
 
 local espEnabled = true
 local aimbotEnabled = true
-local aimFOV = 360  -- Full 360 degrees
-local lockStrength = 1.0  -- Instant lock (no smoothing)
+local aimFOV = 360
+local smoothness = 0.12  -- Smooth but strong tracking
 
 -- Create GUI
 local screenGui = Instance.new("ScreenGui")
@@ -76,13 +77,14 @@ aimButton.MouseButton1Click:Connect(function()
     aimButton.Text = aimbotEnabled and "AIMBOT: ON" or "AIMBOT: OFF"
 end)
 
--- ESP using TextLabels
+-- ESP: Box + Health Bar (no names)
 local espContainer = Instance.new("Frame")
 espContainer.Size = UDim2.new(1, 0, 1, 0)
 espContainer.BackgroundTransparency = 1
 espContainer.Parent = screenGui
 
-local espLabels = {}
+local espBoxes = {}
+local espHealthBars = {}
 
 local function getPlayers()
     local list = {}
@@ -102,41 +104,73 @@ local function worldToScreen(position)
     return nil, nil
 end
 
+local function getPlayerHealth(player)
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        return humanoid.Health, humanoid.MaxHealth
+    end
+    return 0, 100
+end
+
 local function updateESP()
-    for player, label in pairs(espLabels) do
+    for player, box in pairs(espBoxes) do
+        local healthBar = espHealthBars[player]
         if not player or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-            label.Visible = false
+            box.Visible = false
+            healthBar.Visible = false
         else
             local rootPart = player.Character.HumanoidRootPart
             local screenPos, depth = worldToScreen(rootPart.Position)
             if screenPos then
-                label.Position = UDim2.new(0, screenPos.X - 50, 0, screenPos.Y - 20)
-                label.Text = player.Name .. " | " .. string.format("%.0fm", depth * 3.28)
-                label.Visible = espEnabled
+                local distance = depth * 3.28
+                local boxSize = 100 / distance * 4
+                local boxWidth = boxSize
+                local boxHeight = boxSize * 1.5
+                local boxPos = Vector2.new(screenPos.X - boxWidth/2, screenPos.Y - boxHeight/2)
+                
+                -- Box
+                box.Position = UDim2.new(0, boxPos.X, 0, boxPos.Y)
+                box.Size = UDim2.new(0, boxWidth, 0, boxHeight)
+                box.Visible = espEnabled
+                
+                -- Health
+                local health, maxHealth = getPlayerHealth(player)
+                local healthPercent = math.clamp(health / maxHealth, 0, 1)
+                local healthHeight = boxHeight * healthPercent
+                healthBar.Size = UDim2.new(0, 4, 0, healthHeight)
+                healthBar.Position = UDim2.new(0, boxPos.X - 6, 0, boxPos.Y + boxHeight - healthHeight)
+                healthBar.Visible = espEnabled
+                healthBar.BackgroundColor3 = Color3.new(1 - healthPercent, healthPercent, 0)
             else
-                label.Visible = false
+                box.Visible = false
+                healthBar.Visible = false
             end
         end
     end
 end
 
 local function createESP(player)
-    if espLabels[player] then return end
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 100, 0, 20)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1, 0, 0)
-    label.TextStrokeTransparency = 0.3
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.Parent = espContainer
-    espLabels[player] = label
+    if espBoxes[player] then return end
+    
+    local box = Instance.new("Frame")
+    box.BackgroundTransparency = 1
+    box.BorderSizePixel = 2
+    box.BorderColor3 = Color3.new(1, 0, 0)
+    box.Parent = espContainer
+    
+    local healthBar = Instance.new("Frame")
+    healthBar.BackgroundColor3 = Color3.new(0, 1, 0)
+    healthBar.BorderSizePixel = 0
+    healthBar.Parent = espContainer
+    
+    espBoxes[player] = box
+    espHealthBars[player] = healthBar
 end
 
--- SUPER AIMBOT: closest player regardless of distance or screen position
+-- AIMBOT: Smooth camera + simulated weapon alignment
 local function getClosestPlayerAnywhere()
     local closest = nil
-    local closestAngle = math.rad(aimFOV)  -- Convert to radians for 3D angle
+    local closestAngle = math.huge
     local cameraPos = Camera.CFrame.Position
     local cameraDir = Camera.CFrame.LookVector
     
@@ -147,23 +181,30 @@ local function getClosestPlayerAnywhere()
             local toTarget = (targetPos - cameraPos).unit
             local angle = math.acos(cameraDir:Dot(toTarget))
             
-            -- Check if within FOV (360 degrees means always true)
-            local withinFOV = (aimFOV >= 360) or (angle <= math.rad(aimFOV / 2))
-            
-            if withinFOV then
-                if closest == nil or angle < closestAngle then
-                    closestAngle = angle
-                    closest = player
-                end
+            if angle < closestAngle then
+                closestAngle = angle
+                closest = player
             end
         end
     end
     return closest
 end
 
--- INSTANT LOCK: no smoothing, immediate snap to target
+-- Mouse movement simulation for weapon alignment
+local function moveMouseToTarget(targetPos)
+    local targetScreen, onScreen = Camera:WorldToViewportPoint(targetPos)
+    if not onScreen then return end
+    
+    local currentMouse = UserInputService:GetMouseLocation()
+    local deltaX = targetScreen.X - currentMouse.X
+    local deltaY = targetScreen.Y - currentMouse.Y
+    
+    -- Apply smooth movement
+    mousemoverel(deltaX * smoothness, deltaY * smoothness)
+end
+
 RunService.RenderStepped:Connect(function()
-    -- ESP creation
+    -- ESP creation and update
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             createESP(player)
@@ -171,7 +212,7 @@ RunService.RenderStepped:Connect(function()
     end
     updateESP()
     
-    -- SUPER AIMBOT
+    -- SMOOTH AIMBOT (camera + weapon)
     if aimbotEnabled then
         local target = getClosestPlayerAnywhere()
         if target and target.Character then
@@ -179,13 +220,13 @@ RunService.RenderStepped:Connect(function()
             if aimPart then
                 local targetPos = aimPart.Position
                 local currentPos = Camera.CFrame.Position
-                -- Direct instant lock
+                
+                -- Smooth camera movement
                 local newCFrame = CFrame.new(currentPos, targetPos)
-                if lockStrength >= 0.99 then
-                    Camera.CFrame = newCFrame  -- Instant snap
-                else
-                    Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lockStrength)
-                end
+                Camera.CFrame = Camera.CFrame:Lerp(newCFrame, smoothness * 2)
+                
+                -- Move mouse for weapon alignment (critical for killing)
+                moveMouseToTarget(targetPos)
             end
         end
     end
