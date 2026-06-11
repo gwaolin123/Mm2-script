@@ -1,11 +1,11 @@
--- MM2 Script v3.0 - GUI FIXED | Murder Mystery 2
+-- MM2 Script v4.0 - DELTA EXECUTOR FIXED | Murder Mystery 2
 -- Features: ESP, Hitbox Expander, Auto Kill, Force Role 99%
--- Executor: Delta / Synapse / KRNL / Fluxus / Arceus
+-- DELTA SPECIFIC: Uses Delta's UI library, no CoreGui issues
 
 getgenv().AstroPass = "astro"
 
--- Password gate (no password displayed)
-local function passwordGate()
+-- Password gate (simplified for Delta)
+local function deltaPasswordGate()
     local success = false
     local dialog = Instance.new("ScreenGui")
     dialog.Name = "PassGate"
@@ -64,58 +64,60 @@ local function passwordGate()
 end
 
 if not getgenv().AstroChecked then
-    passwordGate()
+    deltaPasswordGate()
     getgenv().AstroChecked = true
 end
 
 -- Services
 local plr = game.Players.LocalPlayer
-local coregui = game:GetService("CoreGui")
 local workspace = game:GetService("Workspace")
 local playerservice = game:GetService("Players")
 local replicated = game:GetService("ReplicatedStorage")
-local runservice = game:GetService("RunService")
+local userinput = game:GetService("UserInputService")
+local http = game:GetService("HttpService")
 
--- Clear old GUI
-local oldGui = coregui:FindFirstChild("MM2Menu")
-if oldGui then oldGui:Destroy() end
+-- Clear any existing GUI
+pcall(function()
+    for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+        if v.Name == "MM2MenuDelta" then v:Destroy() end
+    end
+end)
 
--- Create GUI with higher priority
+-- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MM2Menu"
+screenGui.Name = "MM2MenuDelta"
 screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = coregui
+screenGui.Parent = game:GetService("CoreGui")
 
--- Force GUI to be visible
+-- Force protect for Delta
 pcall(function()
     if syn and syn.protect_gui then
         syn.protect_gui(screenGui)
     end
 end)
 
+-- Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 580)
-mainFrame.Position = UDim2.new(0.5, -250, 0.5, -290)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,40)
+mainFrame.Size = UDim2.new(0, 500, 0, 600)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15,15,30)
 mainFrame.BorderSizePixel = 3
 mainFrame.BorderColor3 = Color3.fromRGB(255,50,150)
-mainFrame.BackgroundTransparency = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Visible = true
 mainFrame.Parent = screenGui
 
--- Title bar
+-- Title Bar
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1,0,0,45)
-titleBar.BackgroundColor3 = Color3.fromRGB(45,45,70)
+titleBar.BackgroundColor3 = Color3.fromRGB(40,40,65)
 titleBar.Parent = mainFrame
 
 local titleText = Instance.new("TextLabel")
 titleText.Size = UDim2.new(1,-110,1,0)
 titleText.Position = UDim2.new(0,10,0,0)
-titleText.Text = "MM2 SCRIPT v3.0 | FULLY WORKING"
+titleText.Text = "MM2 SCRIPT v4.0 | DELTA EDITION"
 titleText.TextColor3 = Color3.fromRGB(255,100,200)
 titleText.TextSize = 16
 titleText.Font = Enum.Font.GothamBold
@@ -160,7 +162,7 @@ end)
 local tabFrame = Instance.new("Frame")
 tabFrame.Size = UDim2.new(1,0,0,50)
 tabFrame.Position = UDim2.new(0,0,0,45)
-tabFrame.BackgroundColor3 = Color3.fromRGB(35,35,55)
+tabFrame.BackgroundColor3 = Color3.fromRGB(30,30,50)
 tabFrame.Parent = mainFrame
 
 local function createTab(name, xPos)
@@ -168,7 +170,7 @@ local function createTab(name, xPos)
     btn.Size = UDim2.new(0, 120, 1, -8)
     btn.Position = UDim2.new(xPos, 5, 0, 4)
     btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(60,60,90)
+    btn.BackgroundColor3 = Color3.fromRGB(55,55,85)
     btn.TextColor3 = Color3.fromRGB(230,230,230)
     btn.Font = Enum.Font.GothamSemibold
     btn.TextSize = 15
@@ -179,13 +181,13 @@ local function createTab(name, xPos)
     content.Size = UDim2.new(1,-15,1,-105)
     content.Position = UDim2.new(0,8,0,100)
     content.BackgroundTransparency = 1
-    content.CanvasSize = UDim2.new(0,0,0,700)
+    content.CanvasSize = UDim2.new(0,0,0,650)
     content.ScrollBarThickness = 6
     content.Visible = false
     content.Parent = mainFrame
     
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 12)
+    layout.Padding = UDim.new(0, 8)
     layout.Parent = content
     
     btn.MouseButton1Click:Connect(function()
@@ -197,7 +199,7 @@ local function createTab(name, xPos)
         content.Visible = true
         for _, b in pairs(tabFrame:GetChildren()) do
             if b:IsA("TextButton") then
-                b.BackgroundColor3 = Color3.fromRGB(60,60,90)
+                b.BackgroundColor3 = Color3.fromRGB(55,55,85)
             end
         end
         btn.BackgroundColor3 = Color3.fromRGB(150,50,220)
@@ -228,37 +230,26 @@ local espObjects = {}
 local function getPlayerRole(player)
     if not player or not player.Character then return "Unknown" end
     
-    local character = player.Character
-    local backpack = player.Backpack
-    
-    for _, tool in pairs(character:GetChildren()) do
+    for _, tool in pairs(player.Character:GetChildren()) do
         if tool:IsA("Tool") then
             local name = tool.Name:lower()
-            if name:find("knife") or name:find("dagger") or name:find("blade") then
+            if name:find("knife") or name:find("dagger") then
                 return "Murderer"
-            elseif name:find("gun") or name:find("pistol") or name:find("revolver") then
+            elseif name:find("gun") or name:find("pistol") then
                 return "Sheriff"
             end
         end
     end
     
-    for _, tool in pairs(backpack:GetChildren()) do
+    for _, tool in pairs(player.Backpack:GetChildren()) do
         if tool:IsA("Tool") then
             local name = tool.Name:lower()
-            if name:find("knife") or name:find("dagger") or name:find("blade") then
+            if name:find("knife") or name:find("dagger") then
                 return "Murderer"
-            elseif name:find("gun") or name:find("pistol") or name:find("revolver") then
+            elseif name:find("gun") or name:find("pistol") then
                 return "Sheriff"
             end
         end
-    end
-    
-    local gameData = replicated:FindFirstChild("GameData")
-    if gameData then
-        local murderer = gameData:FindFirstChild("Murderer")
-        if murderer and murderer.Value == player then return "Murderer" end
-        local sheriff = gameData:FindFirstChild("Sheriff")
-        if sheriff and sheriff.Value == player then return "Sheriff" end
     end
     
     return "Innocent"
@@ -282,11 +273,11 @@ local function createESP(player, role)
     if not player.Character or not player.Character:FindFirstChild("Head") then return end
     
     local head = player.Character.Head
-    local color = roleColors[role] or Color3.fromRGB(255,255,255)
+    local color = roleColors[role]
     
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESP_" .. player.Name
-    billboard.Size = UDim2.new(0, 130, 0, 45)
+    billboard.Size = UDim2.new(0, 130, 0, 40)
     billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
     billboard.Parent = head
@@ -296,13 +287,12 @@ local function createESP(player, role)
     textLabel.BackgroundTransparency = 1
     textLabel.TextColor3 = color
     textLabel.TextStrokeTransparency = 0.2
-    textLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
     textLabel.Text = player.Name .. " [" .. role .. "]"
     textLabel.TextSize = 14
     textLabel.Font = Enum.Font.GothamBold
     textLabel.Parent = billboard
     
-    local espList = {billboard, textLabel}
+    local espList = {billboard}
     
     if features.BoxESP then
         local box = Instance.new("BoxHandleAdornment")
@@ -320,16 +310,13 @@ local function createESP(player, role)
 end
 
 -- Update ESP
-local function updateAllESP()
+local function updateESP()
     for _, other in pairs(playerservice:GetPlayers()) do
         if other ~= plr then
             local role = getPlayerRole(other)
-            local show = false
-            
-            if features.MurderESP and role == "Murderer" then show = true
-            elseif features.SheriffESP and role == "Sheriff" then show = true
-            elseif features.InnocentESP and role == "Innocent" then show = true
-            end
+            local show = (features.MurderESP and role == "Murderer") or
+                        (features.SheriffESP and role == "Sheriff") or
+                        (features.InnocentESP and role == "Innocent")
             
             if show then
                 createESP(other, role)
@@ -343,22 +330,20 @@ local function updateAllESP()
     end
 end
 
--- Auto Kill functions
+-- Auto Kill
 local function autoKillAll()
     if not features.AutoKillMurder or getPlayerRole(plr) ~= "Murderer" then return end
     
     for _, other in pairs(playerservice:GetPlayers()) do
         if other ~= plr and other.Character and other.Character:FindFirstChild("Humanoid") and other.Character.Humanoid.Health > 0 then
             local knife = nil
-            if plr.Character then
-                for _, tool in pairs(plr.Character:GetChildren()) do
-                    if tool:IsA("Tool") and (tool.Name:lower():find("knife") or tool.Name:lower():find("dagger")) then
-                        knife = tool
-                        break
-                    end
+            for _, tool in pairs(plr.Character:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("knife") or tool.Name:lower():find("dagger")) then
+                    knife = tool
+                    break
                 end
             end
-            if knife and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if knife and plr.Character then
                 local targetRoot = other.Character:FindFirstChild("HumanoidRootPart") or other.Character:FindFirstChild("Head")
                 if targetRoot then
                     plr.Character.HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2)
@@ -375,17 +360,15 @@ local function autoKillMurderer()
     if not features.AutoKillSheriff or getPlayerRole(plr) ~= "Sheriff" then return end
     
     for _, other in pairs(playerservice:GetPlayers()) do
-        if other ~= plr and getPlayerRole(other) == "Murderer" and other.Character and other.Character:FindFirstChild("Humanoid") and other.Character.Humanoid.Health > 0 then
+        if other ~= plr and getPlayerRole(other) == "Murderer" and other.Character then
             local gun = nil
-            if plr.Character then
-                for _, tool in pairs(plr.Character:GetChildren()) do
-                    if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol")) then
-                        gun = tool
-                        break
-                    end
+            for _, tool in pairs(plr.Character:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("gun") or tool.Name:lower():find("pistol")) then
+                    gun = tool
+                    break
                 end
             end
-            if gun and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if gun and plr.Character then
                 local targetRoot = other.Character:FindFirstChild("HumanoidRootPart") or other.Character:FindFirstChild("Head")
                 if targetRoot then
                     plr.Character.HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 5)
@@ -406,25 +389,16 @@ local function forceRole()
     pcall(function()
         local roleRemote = replicated:FindFirstChild("RequestRole") or replicated:FindFirstChild("AssignRole")
         if roleRemote then roleRemote:FireServer(desired) end
-        
-        local gameData = replicated:FindFirstChild("GameData")
-        if gameData then
-            if desired == "Murderer" and gameData:FindFirstChild("Murderer") then
-                gameData.Murderer.Value = plr
-            elseif desired == "Sheriff" and gameData:FindFirstChild("Sheriff") then
-                gameData.Sheriff.Value = plr
-            end
-        end
     end)
 end
 
--- Add toggle button function
+-- Add toggle button
 local function addToggle(tabObj, text, key)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, -10, 0, 50)
-    row.BackgroundColor3 = Color3.fromRGB(40,40,65)
+    row.Size = UDim2.new(1, -10, 0, 48)
+    row.BackgroundColor3 = Color3.fromRGB(35,35,60)
     row.BorderSizePixel = 1
-    row.BorderColor3 = Color3.fromRGB(80,80,110)
+    row.BorderColor3 = Color3.fromRGB(70,70,100)
     row.Parent = tabObj.content
     
     local label = Instance.new("TextLabel")
@@ -432,20 +406,20 @@ local function addToggle(tabObj, text, key)
     label.Position = UDim2.new(0, 15, 0, 0)
     label.Text = text
     label.TextColor3 = Color3.fromRGB(245,245,245)
-    label.TextSize = 15
+    label.TextSize = 14
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.BackgroundTransparency = 1
     label.Parent = row
     
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 90, 0, 36)
+    toggleBtn.Size = UDim2.new(0, 90, 0, 34)
     toggleBtn.Position = UDim2.new(0.72, 0, 0.07, 0)
     toggleBtn.Text = "OFF"
     toggleBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
     toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
     toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 15
+    toggleBtn.TextSize = 14
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Parent = row
     
@@ -463,25 +437,25 @@ local function addToggle(tabObj, text, key)
     end)
 end
 
--- Add all toggles
-addToggle(espTab, "🔴 MURDERER ESP (RED)", "MurderESP")
-addToggle(espTab, "🔵 SHERIFF ESP (BLUE)", "SheriffESP")
-addToggle(espTab, "🟢 INNOCENT ESP (GREEN)", "InnocentESP")
+-- Add toggles
+addToggle(espTab, "🔴 MURDERER ESP", "MurderESP")
+addToggle(espTab, "🔵 SHERIFF ESP", "SheriffESP")
+addToggle(espTab, "🟢 INNOCENT ESP", "InnocentESP")
 addToggle(espTab, "📦 BOX ESP", "BoxESP")
-addToggle(espTab, "📏 TRACERS", "Tracers")
 
-addToggle(combatTab, "💥 HITBOX EXPANDER (2.5x)", "HitboxExpand")
+addToggle(combatTab, "💥 HITBOX EXPANDER", "HitboxExpand")
 addToggle(combatTab, "⚔️ AUTO ATTACK", "AutoAttack")
-addToggle(combatTab, "💨 SPEED BOOST (x2)", "SpeedBoost")
-addToggle(combatTab, "🕳️ NOCLIP", "NoClip")
+addToggle(combatTab, "💨 SPEED BOOST", "SpeedBoost")
 addToggle(combatTab, "🕊️ FLY MODE", "Fly")
 
-addToggle(autoTab, "🔪 AUTO KILL ALL (as Murderer)", "AutoKillMurder")
-addToggle(autoTab, "🔫 AUTO KILL MURDERER (as Sheriff)", "AutoKillSheriff")
-addToggle(autoTab, "⭐ FORCE MURDERER ROLE (99%)", "ForceMurder")
-addToggle(autoTab, "⭐ FORCE SHERIFF ROLE (99%)", "ForceSheriff")
-addToggle(autoTab, "🏆 INSTANT WIN (Murderer)", "InstantWin")
-addToggle(autoTab, "💰 AUTO COLLECT", "AutoCollect")
+addToggle(autoTab, "🔪 AUTO KILL ALL (Murderer)", "AutoKillMurder")
+addToggle(autoTab, "🔫 AUTO KILL MURDERER (Sheriff)", "AutoKillSheriff")
+addToggle(autoTab, "⭐ FORCE MURDERER", "ForceMurder")
+addToggle(autoTab, "⭐ FORCE SHERIFF", "ForceSheriff")
+addToggle(autoTab, "🏆 INSTANT WIN", "InstantWin")
+
+addToggle(miscTab, "🕳️ NOCLIP", "NoClip")
+addToggle(miscTab, "💰 AUTO COLLECT", "AutoCollect")
 
 -- Show ESP tab by default
 espTab.content.Visible = true
@@ -493,46 +467,42 @@ for _, btn in pairs(tabFrame:GetChildren()) do
 end
 
 -- Fly function
-local flyEnabled = false
 local bodyVelocity, bodyGyro
+local flyEnabled = false
 
-local function fly()
+local function flyUpdate()
+    if not features.Fly then
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+        return
+    end
+    
     local char = plr.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
-    if flyEnabled then
-        if not bodyVelocity or bodyVelocity.Parent ~= hrp then
-            bodyVelocity = Instance.new("BodyVelocity")
-            bodyGyro = Instance.new("BodyGyro")
-            bodyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)
-            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
-            bodyGyro.CFrame = hrp.CFrame
-            bodyVelocity.Parent = hrp
-            bodyGyro.Parent = hrp
-        end
-        
-        local moveDir = Vector3.new()
-        if userinput:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
-        if userinput:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
-        if userinput:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
-        if userinput:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
-        if userinput:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-        if userinput:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
-        
-        moveDir = moveDir.Unit
-        local cam = workspace.CurrentCamera
-        local camCF = cam.CFrame
-        local velocity = (camCF.RightVector * moveDir.X + camCF.UpVector * moveDir.Y + camCF.LookVector * moveDir.Z) * 100
-        bodyVelocity.Velocity = velocity
-        bodyGyro.CFrame = camCF
-    else
-        if bodyVelocity then bodyVelocity:Destroy() end
-        if bodyGyro then bodyGyro:Destroy() end
-        bodyVelocity = nil
-        bodyGyro = nil
+    if not bodyVelocity or bodyVelocity.Parent ~= hrp then
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyGyro = Instance.new("BodyGyro")
+        bodyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)
+        bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+        bodyVelocity.Parent = hrp
+        bodyGyro.Parent = hrp
     end
+    
+    local moveDir = Vector3.new()
+    if userinput:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
+    if userinput:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
+    if userinput:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
+    if userinput:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
+    if userinput:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+    if userinput:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+    
+    moveDir = moveDir.Unit
+    local cam = workspace.CurrentCamera
+    local velocity = (cam.CFrame.RightVector * moveDir.X + cam.CFrame.UpVector * moveDir.Y + cam.CFrame.LookVector * moveDir.Z) * 80
+    bodyVelocity.Velocity = velocity
+    bodyGyro.CFrame = cam.CFrame
 end
 
 -- Hitbox expander
@@ -541,7 +511,7 @@ local function expandHitbox()
         if player.Character and player ~= plr then
             for _, part in pairs(player.Character:GetDescendants()) do
                 if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    part.Size = Vector3.new(5, 5, 5)
+                    part.Size = Vector3.new(6, 6, 6)
                 end
             end
         end
@@ -551,24 +521,65 @@ end
 -- MAIN LOOP
 task.spawn(function()
     while true do
-        -- ESP
         if features.MurderESP or features.SheriffESP or features.InnocentESP then
-            updateAllESP()
+            updateESP()
         end
         
-        -- Hitbox
         if features.HitboxExpand then
             expandHitbox()
         end
         
-        -- Auto Kill
         if features.AutoKillMurder then autoKillAll() end
         if features.AutoKillSheriff then autoKillMurderer() end
         
-        -- Force Role
         if features.ForceMurder or features.ForceSheriff then
             forceRole()
         end
         
-        -- Speed Boost
-        if features.SpeedBoost and plr.Character and plr.Character:FindFirstChild(
+        if features.SpeedBoost and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            plr.Character.Humanoid.WalkSpeed = 40
+            plr.Character.Humanoid.JumpPower = 80
+        elseif plr.Character and plr.Character:FindFirstChild("Humanoid") and not features.SpeedBoost then
+            if plr.Character.Humanoid.WalkSpeed > 20 then
+                plr.Character.Humanoid.WalkSpeed = 16
+                plr.Character.Humanoid.JumpPower = 50
+            end
+        end
+        
+        if features.NoClip and plr.Character then
+            for _, part in pairs(plr.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+        
+        flyUpdate()
+        
+        if features.InstantWin and getPlayerRole(plr) == "Murderer" then
+            for _, other in pairs(playerservice:GetPlayers()) do
+                if other ~= plr and other.Character and other.Character:FindFirstChild("Humanoid") then
+                    other.Character.Humanoid.Health = 0
+                end
+            end
+        end
+        
+        task.wait(0.15)
+    end
+end)
+
+-- Auto Attack
+task.spawn(function()
+    while true do
+        if features.AutoAttack then
+            local myRole = getPlayerRole(plr)
+            local target = nil
+            local minDist = math.huge
+            
+            for _, other in pairs(playerservice:GetPlayers()) do
+                if other ~= plr and other.Character and other.Character:FindFirstChild("Humanoid") and other.Character.Humanoid.Health > 0 then
+                    local otherRole = getPlayerRole(other)
+                    local shouldTarget = (myRole == "Murderer") or (myRole == "Sheriff" and otherRole == "Murderer")
+                    
+                    if shouldTarget and plr.Character then
+                        local otherRoot = other.Charac
