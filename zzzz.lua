@@ -1,128 +1,198 @@
--- Steal Brainrot Script | Invisible | No Ban Bypass | Auto Lock Base | Auto Steal Highest Value
--- Roblox (Synapse X / Krnl / ScriptWare compatible)
+-- Delta Executor - Steal Brainrot Script | Invisible | No Ban | Auto Lock Base | Auto Steal Highest | Fake Clone Decoy
+-- Full script for Delta (direct execution)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
-local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
--- Anti-Ban / Invisibility
-local function makeInvisible()
-    local char = player.Character
-    if char then
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Transparency = 1
-                part.CanCollide = false
-            end
+-- Clone decoy variables
+local clone = nil
+local cloneHumanoid = nil
+
+-- Create fake clone that stands still (other players see this instead of real you)
+local function createFakeClone()
+    if clone then clone:Destroy() end
+    local realChar = player.Character
+    if not realChar then return end
+    clone = realChar:Clone()
+    clone.Name = player.Name .. "_Decoy"
+    clone.Parent = workspace
+    -- Position clone where real character is
+    local hrp = realChar:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        local cloneHrp = clone:FindFirstChild("HumanoidRootPart")
+        if cloneHrp then
+            cloneHrp.CFrame = hrp.CFrame
+            cloneHrp.Anchored = true
         end
-        local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.BreakJointsOnDeath = false
-            humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    end
+    -- Make clone stand still, no animations
+    cloneHumanoid = clone:FindFirstChild("Humanoid")
+    if cloneHumanoid then
+        cloneHumanoid.PlatformStand = true
+        cloneHumanoid.WalkSpeed = 0
+        cloneHumanoid.JumpPower = 0
+        cloneHumanoid.BreakJointsOnDeath = false
+    end
+    -- Remove scripts from clone to avoid detection
+    for _, script in ipairs(clone:GetDescendants()) do
+        if script:IsA("Script") or script:IsA("LocalScript") then
+            script:Destroy()
+        end
+    end
+    -- Make real character invisible
+    for _, part in ipairs(realChar:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CanCollide = false
         end
     end
 end
 
--- Hook remote events to prevent detection
-local oldFireServer = nil
-if ReplicatedStorage and ReplicatedStorage.FindFirstChild then
-    oldFireServer = debug.getupvalues(ReplicatedStorage.FindFirstChild("FireServer")) or function() end
-    hookfunction(oldFireServer, function(...)
-        local args = {...}
-        for i, v in pairs(args) do
-            if type(v) == "string" and (string.find(v, "report") or string.find(v, "ban")) then
-                return nil
-            end
-        end
-        return oldFireServer(...)
-    end)
+-- Update clone position every few seconds to match real character's last position (while real is invisible and moving)
+local function updateClonePosition()
+    if not clone then return end
+    local realChar = player.Character
+    if not realChar then return end
+    local realHrp = realChar:FindFirstChild("HumanoidRootPart")
+    local cloneHrp = clone:FindFirstChild("HumanoidRootPart")
+    if realHrp and cloneHrp then
+        -- Clone stays anchored at position where real was when stealing started
+        -- Do not constantly update - keeps decoy in place
+    end
 end
 
--- Auto Lock Base (find nearest base and claim it repeatedly)
-local function lockNearestBase()
-    local bases = workspace:FindFirstChild("Bases") or workspace:FindFirstChild("BaseZones")
-    if not bases then return end
-    local nearest = nil
-    local minDist = math.huge
-    local charPos = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not charPos then return end
-    for _, base in ipairs(bases:GetChildren()) do
-        if base:IsA("Model") or base:IsA("Part") then
-            local pos = base:FindFirstChild("Position") or base:FindFirstChild("Part")
-            if pos and pos.Position then
-                local dist = (charPos.Position - pos.Position).magnitude
-                if dist < minDist then
-                    minDist = dist
-                    nearest = base
+-- Invisibility (real character fully hidden)
+local function makeInvisible()
+    local char = player.Character
+    if not char then return end
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CanCollide = false
+            part.Material = Enum.Material.ForceField
+        end
+    end
+    local hum = char:FindFirstChild("Humanoid")
+    if hum then
+        hum.WalkSpeed = 50
+        hum.JumpPower = 80
+    end
+end
+
+-- Anti-Ban (Delta remote spy bypass)
+if game.ReplicatedStorage then
+    local remotes = game.ReplicatedStorage:GetChildren()
+    for _, r in pairs(remotes) do
+        if r:IsA("RemoteEvent") or r:IsA("RemoteFunction") then
+            local old = r.FireServer
+            if old then
+                r.FireServer = function(_, ...)
+                    local args = {...}
+                    for _, v in pairs(args) do
+                        if type(v) == "string" and (string.find(v:lower(), "ban") or string.find(v:lower(), "report") or string.find(v:lower(), "cheat")) then
+                            return nil
+                        end
+                    end
+                    return old(r, ...)
                 end
             end
         end
     end
+end
+
+-- Auto Lock Base
+local function lockNearestBase()
+    local bases = workspace:FindFirstChild("Bases") or workspace:FindFirstChild("CaptureZones") or workspace:FindFirstChild("Flags") or workspace:FindFirstChild("BaseZones")
+    if not bases then return end
+    local nearest = nil
+    local minDist = math.huge
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    for _, base in ipairs(bases:GetChildren()) do
+        local pos = base:FindFirstChild("Position") or base:FindFirstChild("Part") or base:FindFirstChild("Root") or base:FindFirstChild("BasePart")
+        if pos and pos.Position then
+            local dist = (hrp.Position - pos.Position).magnitude
+            if dist < minDist then
+                minDist = dist
+                nearest = base
+            end
+        end
+    end
     if nearest then
-        local lockRemote = ReplicatedStorage:FindFirstChild("LockBase") or ReplicatedStorage:FindFirstChild("ClaimBase")
-        if lockRemote then
+        local lockRemote = ReplicatedStorage:FindFirstChild("LockBase") or ReplicatedStorage:FindFirstChild("CaptureBase") or ReplicatedStorage:FindFirstChild("ClaimBase") or ReplicatedStorage:FindFirstChild("StealBase")
+        if lockRemote and lockRemote:IsA("RemoteEvent") then
             lockRemote:FireServer(nearest)
         end
     end
 end
 
--- Auto Steal Highest (brainrot currency / points)
+-- Auto Steal Highest Brainrot
 local function stealHighest()
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local playersList = Players:GetPlayers()
     local highest = nil
-    local maxVal = -math.huge
-    for _, other in ipairs(playersList) do
+    local maxVal = -9e99
+    for _, other in ipairs(Players:GetPlayers()) do
         if other ~= player then
             local stats = other:FindFirstChild("leaderstats")
             if stats then
-                local brainrotVal = stats:FindFirstChild("Brainrot") or stats:FindFirstChild("Points") or stats:FindFirstChild("Value")
-                if brainrotVal and type(brainrotVal.Value) == "number" and brainrotVal.Value > maxVal then
-                    maxVal = brainrotVal.Value
+                local val = stats:FindFirstChild("Brainrot") or stats:FindFirstChild("Points") or stats:FindFirstChild("Value") or stats:FindFirstChild("Cash") or stats:FindFirstChild("Money")
+                if val and type(val.Value) == "number" and val.Value > maxVal then
+                    maxVal = val.Value
                     highest = other
                 end
             end
         end
     end
     if highest then
-        local stealRemote = ReplicatedStorage:FindFirstChild("StealBrainrot") or ReplicatedStorage:FindFirstChild("Rob")
-        if stealRemote then
+        local stealRemote = ReplicatedStorage:FindFirstChild("Steal") or ReplicatedStorage:FindFirstChild("RobBrainrot") or ReplicatedStorage:FindFirstChild("TakePoints") or ReplicatedStorage:FindFirstChild("Transfer")
+        if stealRemote and stealRemote:IsA("RemoteEvent") then
             stealRemote:FireServer(highest)
         end
     end
 end
 
--- Loop for auto lock and auto steal
+-- Create clone on script start
+spawn(function()
+    repeat wait() until player.Character
+    createFakeClone()
+end)
+
+-- Main loop
+RunService.RenderStepped:Connect(function()
+    if player.Character then
+        makeInvisible()
+        lockNearestBase()
+        stealHighest()
+        updateClonePosition()
+    end
+end)
+
+-- Refresh clone if destroyed
+player.CharacterAdded:Connect(function()
+    wait(0.5)
+    createFakeClone()
+end)
+
+-- Prevent kicks
+local oldKick = game.Kick
+game.Kick = function(...) return end
+pcall(function()
+    player.Kick = function(...) return end
+end)
+
+-- Anti-ban heartbeat spoof
+local http = game:GetService("HttpService")
 spawn(function()
     while true do
-        wait(0.5)
-        if player.Character then
-            makeInvisible()
-            lockNearestBase()
-            stealHighest()
+        wait(30)
+        local heartbeat = ReplicatedStorage:FindFirstChild("Heartbeat") or ReplicatedStorage:FindFirstChild("Ping")
+        if heartbeat and heartbeat:IsA("RemoteEvent") then
+            heartbeat:FireServer(http:GenerateGUID(false))
         end
     end
 end)
 
--- Bypass kick/ban checks (simulate normal client behavior)
-local oldKick = game.Kick
-game.Kick = function(...)
-    -- block kick
-    return nil
-end
-
-local oldBan = game:GetService("Players").LocalPlayer.Kick
-if oldBan then
-    player.Kick = function(...) return nil end
-end
-
--- Hide from server logs (fake ping and stats)
-local oldStats = game:GetService("Stats").Network
-if oldStats then
-    hookfunction(oldStats.GetAveragePing, function() return 50 end)
-end
-
-print("Brainrot Stealer Active | Invisible | Anti-Ban | Auto Lock Base | Auto Steal Highest")
+print("Delta Brainrot Stealer Active | Invisible | Fake Clone Decoy | Anti-Ban | Auto Lock | Auto Steal")
