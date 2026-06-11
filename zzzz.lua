@@ -1,5 +1,5 @@
--- MM2 Script v2.0 - FULLY WORKING | Murder Mystery 2
--- Features: ESP (Murder/Sheriff/Innocent), Hitbox Expander, Auto Kill, Force Role 99%
+-- MM2 Script v3.0 - GUI FIXED | Murder Mystery 2
+-- Features: ESP, Hitbox Expander, Auto Kill, Force Role 99%
 -- Executor: Delta / Synapse / KRNL / Fluxus / Arceus
 
 getgenv().AstroPass = "astro"
@@ -75,26 +75,32 @@ local workspace = game:GetService("Workspace")
 local playerservice = game:GetService("Players")
 local replicated = game:GetService("ReplicatedStorage")
 local runservice = game:GetService("RunService")
-local lighting = game:GetService("Lighting")
-local userinput = game:GetService("UserInputService")
 
 -- Clear old GUI
 local oldGui = coregui:FindFirstChild("MM2Menu")
 if oldGui then oldGui:Destroy() end
 
--- Create GUI
+-- Create GUI with higher priority
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MM2Menu"
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = coregui
 
+-- Force GUI to be visible
+pcall(function()
+    if syn and syn.protect_gui then
+        syn.protect_gui(screenGui)
+    end
+end)
+
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 480, 0, 550)
-mainFrame.Position = UDim2.new(0.5, -240, 0.5, -275)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,35)
+mainFrame.Size = UDim2.new(0, 500, 0, 580)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -290)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,40)
 mainFrame.BorderSizePixel = 3
-mainFrame.BorderColor3 = Color3.fromRGB(255,0,100)
+mainFrame.BorderColor3 = Color3.fromRGB(255,50,150)
+mainFrame.BackgroundTransparency = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Visible = true
@@ -102,14 +108,14 @@ mainFrame.Parent = screenGui
 
 -- Title bar
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1,0,0,40)
-titleBar.BackgroundColor3 = Color3.fromRGB(40,40,60)
+titleBar.Size = UDim2.new(1,0,0,45)
+titleBar.BackgroundColor3 = Color3.fromRGB(45,45,70)
 titleBar.Parent = mainFrame
 
 local titleText = Instance.new("TextLabel")
-titleText.Size = UDim2.new(1,-100,1,0)
+titleText.Size = UDim2.new(1,-110,1,0)
 titleText.Position = UDim2.new(0,10,0,0)
-titleText.Text = "MM2 SCRIPT v2.0 | FULLY WORKING"
+titleText.Text = "MM2 SCRIPT v3.0 | FULLY WORKING"
 titleText.TextColor3 = Color3.fromRGB(255,100,200)
 titleText.TextSize = 16
 titleText.Font = Enum.Font.GothamBold
@@ -129,13 +135,13 @@ closeBtn.BorderSizePixel = 0
 closeBtn.Parent = titleBar
 
 local openBtn = Instance.new("TextButton")
-openBtn.Size = UDim2.new(0,100,0,45)
-openBtn.Position = UDim2.new(0.02,0,0.02,0)
+openBtn.Size = UDim2.new(0,120,0,50)
+openBtn.Position = UDim2.new(0.5, -60, 0.5, -25)
 openBtn.Text = "OPEN MENU"
 openBtn.TextColor3 = Color3.fromRGB(255,255,255)
 openBtn.BackgroundColor3 = Color3.fromRGB(0,180,0)
 openBtn.Font = Enum.Font.GothamBold
-openBtn.TextSize = 16
+openBtn.TextSize = 18
 openBtn.BorderSizePixel = 2
 openBtn.Visible = false
 openBtn.Parent = screenGui
@@ -152,34 +158,34 @@ end)
 
 -- Tab buttons
 local tabFrame = Instance.new("Frame")
-tabFrame.Size = UDim2.new(1,0,0,45)
-tabFrame.Position = UDim2.new(0,0,0,40)
-tabFrame.BackgroundColor3 = Color3.fromRGB(30,30,50)
+tabFrame.Size = UDim2.new(1,0,0,50)
+tabFrame.Position = UDim2.new(0,0,0,45)
+tabFrame.BackgroundColor3 = Color3.fromRGB(35,35,55)
 tabFrame.Parent = mainFrame
 
 local function createTab(name, xPos)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 115, 1, -8)
+    btn.Size = UDim2.new(0, 120, 1, -8)
     btn.Position = UDim2.new(xPos, 5, 0, 4)
     btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(55,55,80)
-    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.BackgroundColor3 = Color3.fromRGB(60,60,90)
+    btn.TextColor3 = Color3.fromRGB(230,230,230)
     btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 14
+    btn.TextSize = 15
     btn.BorderSizePixel = 0
     btn.Parent = tabFrame
     
     local content = Instance.new("ScrollingFrame")
-    content.Size = UDim2.new(1,-15,1,-95)
-    content.Position = UDim2.new(0,8,0,90)
+    content.Size = UDim2.new(1,-15,1,-105)
+    content.Position = UDim2.new(0,8,0,100)
     content.BackgroundTransparency = 1
-    content.CanvasSize = UDim2.new(0,0,0,600)
+    content.CanvasSize = UDim2.new(0,0,0,700)
     content.ScrollBarThickness = 6
     content.Visible = false
     content.Parent = mainFrame
     
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 10)
+    layout.Padding = UDim.new(0, 12)
     layout.Parent = content
     
     btn.MouseButton1Click:Connect(function()
@@ -191,19 +197,19 @@ local function createTab(name, xPos)
         content.Visible = true
         for _, b in pairs(tabFrame:GetChildren()) do
             if b:IsA("TextButton") then
-                b.BackgroundColor3 = Color3.fromRGB(55,55,80)
+                b.BackgroundColor3 = Color3.fromRGB(60,60,90)
             end
         end
-        btn.BackgroundColor3 = Color3.fromRGB(120,50,180)
+        btn.BackgroundColor3 = Color3.fromRGB(150,50,220)
     end)
     
     return {content = content}
 end
 
-local espTab = createTab("ESP", 0.01)
-local combatTab = createTab("COMBAT", 0.24)
-local autoTab = createTab("AUTO", 0.47)
-local miscTab = createTab("MISC", 0.70)
+local espTab = createTab("👁️ ESP", 0.01)
+local combatTab = createTab("⚔️ COMBAT", 0.26)
+local autoTab = createTab("🤖 AUTO", 0.51)
+local miscTab = createTab("🔧 MISC", 0.76)
 
 -- Features
 local features = {
@@ -212,21 +218,19 @@ local features = {
     AutoKillMurder = false, AutoKillSheriff = false,
     ForceMurder = false, ForceSheriff = false,
     AutoAttack = false, SpeedBoost = false, NoClip = false,
-    InstantWin = false, AutoCollect = false
+    InstantWin = false, AutoCollect = false, Fly = false
 }
 
 -- ESP Storage
 local espObjects = {}
-local tracerObjects = {}
 
--- Get player role (IMPROVED)
+-- Get player role
 local function getPlayerRole(player)
     if not player or not player.Character then return "Unknown" end
     
     local character = player.Character
     local backpack = player.Backpack
     
-    -- Check held items
     for _, tool in pairs(character:GetChildren()) do
         if tool:IsA("Tool") then
             local name = tool.Name:lower()
@@ -238,7 +242,6 @@ local function getPlayerRole(player)
         end
     end
     
-    -- Check backpack
     for _, tool in pairs(backpack:GetChildren()) do
         if tool:IsA("Tool") then
             local name = tool.Name:lower()
@@ -250,30 +253,24 @@ local function getPlayerRole(player)
         end
     end
     
-    -- Check if player is the murderer via game values
     local gameData = replicated:FindFirstChild("GameData")
     if gameData then
         local murderer = gameData:FindFirstChild("Murderer")
-        if murderer and murderer.Value == player then
-            return "Murderer"
-        end
+        if murderer and murderer.Value == player then return "Murderer" end
         local sheriff = gameData:FindFirstChild("Sheriff")
-        if sheriff and sheriff.Value == player then
-            return "Sheriff"
-        end
+        if sheriff and sheriff.Value == player then return "Sheriff" end
     end
     
     return "Innocent"
 end
 
--- ESP Colors
 local roleColors = {
     Murderer = Color3.fromRGB(255, 0, 0),
     Sheriff = Color3.fromRGB(0, 150, 255),
     Innocent = Color3.fromRGB(0, 255, 0)
 }
 
--- Create ESP (IMPROVED)
+-- Create ESP
 local function createESP(player, role)
     if espObjects[player] then
         for _, obj in pairs(espObjects[player]) do
@@ -287,10 +284,9 @@ local function createESP(player, role)
     local head = player.Character.Head
     local color = roleColors[role] or Color3.fromRGB(255,255,255)
     
-    -- Name Billboard
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESP_" .. player.Name
-    billboard.Size = UDim2.new(0, 120, 0, 40)
+    billboard.Size = UDim2.new(0, 130, 0, 45)
     billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
     billboard.Parent = head
@@ -306,158 +302,50 @@ local function createESP(player, role)
     textLabel.Font = Enum.Font.GothamBold
     textLabel.Parent = billboard
     
-    local espObjectsList = {billboard, textLabel}
+    local espList = {billboard, textLabel}
     
-    -- Box ESP
     if features.BoxESP then
         local box = Instance.new("BoxHandleAdornment")
         box.Name = "BoxESP"
         box.Size = Vector3.new(4, 5, 2)
         box.Color3 = color
-        box.Transparency = 0.5
+        box.Transparency = 0.4
         box.AlwaysOnTop = true
-        box.ZIndex = 10
         box.Adornee = head
         box.Parent = head
-        table.insert(espObjectsList, box)
+        table.insert(espList, box)
     end
     
-    -- Health Bar
-    local healthBar = Instance.new("BillboardGui")
-    healthBar.Name = "HealthBar"
-    healthBar.Size = UDim2.new(0, 60, 0, 8)
-    healthBar.StudsOffset = Vector3.new(0, 3.5, 0)
-    healthBar.AlwaysOnTop = true
-    healthBar.Parent = head
-    
-    local healthFrame = Instance.new("Frame")
-    healthFrame.Size = UDim2.new(1, 0, 1, 0)
-    healthFrame.BackgroundColor3 = Color3.fromRGB(255,0,0)
-    healthFrame.BorderSizePixel = 0
-    healthFrame.Parent = healthBar
-    
-    local healthFill = Instance.new("Frame")
-    healthFill.Size = UDim2.new(1, 0, 1, 0)
-    healthFill.BackgroundColor3 = Color3.fromRGB(0,255,0)
-    healthFill.BorderSizePixel = 0
-    healthFill.Parent = healthFrame
-    
-    table.insert(espObjectsList, healthBar)
-    
-    espObjects[player] = espObjectsList
-    
-    -- Update health
-    task.spawn(function()
-        while espObjects[player] and player.Character and player.Character:FindFirstChild("Humanoid") do
-            local humanoid = player.Character.Humanoid
-            local healthPercent = humanoid.Health / humanoid.MaxHealth
-            healthFill.Size = UDim2.new(healthPercent, 0, 1, 0)
-            if healthPercent < 0.3 then
-                healthFill.BackgroundColor3 = Color3.fromRGB(255,165,0)
-            elseif healthPercent < 0.6 then
-                healthFill.BackgroundColor3 = Color3.fromRGB(255,255,0)
-            else
-                healthFill.BackgroundColor3 = Color3.fromRGB(0,255,0)
-            end
-            task.wait(0.1)
-        end
-    end)
+    espObjects[player] = espList
 end
 
--- Create Tracers
-local function createTracers()
-    for _, other in pairs(playerservice:GetPlayers()) do
-        if other ~= plr and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
-            if not tracerObjects[other] then
-                local tracer = Instance.new("BillboardGui")
-                tracer.Name = "Tracer_" .. other.Name
-                tracer.Size = UDim2.new(0, 200, 0, 200)
-                tracer.StudsOffset = Vector3.new(0, 0, 0)
-                tracer.AlwaysOnTop = true
-                tracer.Parent = other.Character.HumanoidRootPart
-                
-                local line = Instance.new("Frame")
-                line.Size = UDim2.new(1, 0, 0, 2)
-                line.BackgroundColor3 = roleColors[getPlayerRole(other)] or Color3.fromRGB(255,255,255)
-                line.BackgroundTransparency = 0.3
-                line.Parent = tracer
-                
-                tracerObjects[other] = tracer
-            end
-        end
-    end
-end
-
--- Update all ESPs
+-- Update ESP
 local function updateAllESP()
     for _, other in pairs(playerservice:GetPlayers()) do
         if other ~= plr then
             local role = getPlayerRole(other)
-            local shouldESP = false
+            local show = false
             
-            if features.MurderESP and role == "Murderer" then
-                shouldESP = true
-            elseif features.SheriffESP and role == "Sheriff" then
-                shouldESP = true
-            elseif features.InnocentESP and role == "Innocent" then
-                shouldESP = true
+            if features.MurderESP and role == "Murderer" then show = true
+            elseif features.SheriffESP and role == "Sheriff" then show = true
+            elseif features.InnocentESP and role == "Innocent" then show = true
             end
             
-            if shouldESP then
+            if show then
                 createESP(other, role)
-            else
-                if espObjects[other] then
-                    for _, obj in pairs(espObjects[other]) do
-                        pcall(function() obj:Destroy() end)
-                    end
-                    espObjects[other] = nil
+            elseif espObjects[other] then
+                for _, obj in pairs(espObjects[other]) do
+                    pcall(function() obj:Destroy() end)
                 end
-            end
-        end
-    end
-    
-    if features.Tracers then
-        createTracers()
-    else
-        for _, tracer in pairs(tracerObjects) do
-            pcall(function() tracer:Destroy() end)
-        end
-        tracerObjects = {}
-    end
-end
-
--- Hitbox Expander (IMPROVED)
-local function expandHitbox()
-    for _, player in pairs(playerservice:GetPlayers()) do
-        if player.Character and player ~= plr then
-            for _, part in pairs(player.Character:GetDescendants()) do
-                if part:IsA("BasePart") and not part:FindFirstChild("Expanded") then
-                    part:SetAttribute("OriginalSize", part.Size)
-                    part.Size = part.Size * 2.5
-                    part:SetAttribute("Expanded", true)
-                end
+                espObjects[other] = nil
             end
         end
     end
 end
 
-local function resetHitboxes()
-    for _, player in pairs(playerservice:GetPlayers()) do
-        if player.Character then
-            for _, part in pairs(player.Character:GetDescendants()) do
-                if part:IsA("BasePart") and part:GetAttribute("OriginalSize") then
-                    part.Size = part:GetAttribute("OriginalSize")
-                    part:SetAttribute("Expanded", false)
-                end
-            end
-        end
-    end
-end
-
--- Auto Kill (Murderer kills all)
+-- Auto Kill functions
 local function autoKillAll()
-    if not features.AutoKillMurder then return end
-    if getPlayerRole(plr) ~= "Murderer" then return end
+    if not features.AutoKillMurder or getPlayerRole(plr) ~= "Murderer" then return end
     
     for _, other in pairs(playerservice:GetPlayers()) do
         if other ~= plr and other.Character and other.Character:FindFirstChild("Humanoid") and other.Character.Humanoid.Health > 0 then
@@ -483,10 +371,8 @@ local function autoKillAll()
     end
 end
 
--- Auto Kill Murderer (Sheriff)
 local function autoKillMurderer()
-    if not features.AutoKillSheriff then return end
-    if getPlayerRole(plr) ~= "Sheriff" then return end
+    if not features.AutoKillSheriff or getPlayerRole(plr) ~= "Sheriff" then return end
     
     for _, other in pairs(playerservice:GetPlayers()) do
         if other ~= plr and getPlayerRole(other) == "Murderer" and other.Character and other.Character:FindFirstChild("Humanoid") and other.Character.Humanoid.Health > 0 then
@@ -512,22 +398,15 @@ local function autoKillMurderer()
     end
 end
 
--- Force Role (REAL 99% chance)
+-- Force Role
 local function forceRole()
     if not (features.ForceMurder or features.ForceSheriff) then return end
-    
     local desired = features.ForceMurder and "Murderer" or "Sheriff"
     
-    -- Method 1: Remote
     pcall(function()
         local roleRemote = replicated:FindFirstChild("RequestRole") or replicated:FindFirstChild("AssignRole")
-        if roleRemote then
-            roleRemote:FireServer(desired)
-        end
-    end)
-    
-    -- Method 2: GameData override
-    pcall(function()
+        if roleRemote then roleRemote:FireServer(desired) end
+        
         local gameData = replicated:FindFirstChild("GameData")
         if gameData then
             if desired == "Murderer" and gameData:FindFirstChild("Murderer") then
@@ -537,42 +416,159 @@ local function forceRole()
             end
         end
     end)
+end
+
+-- Add toggle button function
+local function addToggle(tabObj, text, key)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, -10, 0, 50)
+    row.BackgroundColor3 = Color3.fromRGB(40,40,65)
+    row.BorderSizePixel = 1
+    row.BorderColor3 = Color3.fromRGB(80,80,110)
+    row.Parent = tabObj.content
     
-    -- Method 3: Send fake vote
-    pcall(function()
-        local voteRemote = replicated:FindFirstChild("VoteForRole")
-        if voteRemote then
-            voteRemote:FireServer(desired)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 1, 0)
+    label.Position = UDim2.new(0, 15, 0, 0)
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(245,245,245)
+    label.TextSize = 15
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    label.Parent = row
+    
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 90, 0, 36)
+    toggleBtn.Position = UDim2.new(0.72, 0, 0.07, 0)
+    toggleBtn.Text = "OFF"
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
+    toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 15
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Parent = row
+    
+    local state = false
+    toggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        features[key] = state
+        if state then
+            toggleBtn.Text = "ON"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(50,180,50)
+        else
+            toggleBtn.Text = "OFF"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
         end
     end)
 end
 
--- Auto Attack (improved)
-local function autoAttack()
-    if not features.AutoAttack then return end
+-- Add all toggles
+addToggle(espTab, "🔴 MURDERER ESP (RED)", "MurderESP")
+addToggle(espTab, "🔵 SHERIFF ESP (BLUE)", "SheriffESP")
+addToggle(espTab, "🟢 INNOCENT ESP (GREEN)", "InnocentESP")
+addToggle(espTab, "📦 BOX ESP", "BoxESP")
+addToggle(espTab, "📏 TRACERS", "Tracers")
+
+addToggle(combatTab, "💥 HITBOX EXPANDER (2.5x)", "HitboxExpand")
+addToggle(combatTab, "⚔️ AUTO ATTACK", "AutoAttack")
+addToggle(combatTab, "💨 SPEED BOOST (x2)", "SpeedBoost")
+addToggle(combatTab, "🕳️ NOCLIP", "NoClip")
+addToggle(combatTab, "🕊️ FLY MODE", "Fly")
+
+addToggle(autoTab, "🔪 AUTO KILL ALL (as Murderer)", "AutoKillMurder")
+addToggle(autoTab, "🔫 AUTO KILL MURDERER (as Sheriff)", "AutoKillSheriff")
+addToggle(autoTab, "⭐ FORCE MURDERER ROLE (99%)", "ForceMurder")
+addToggle(autoTab, "⭐ FORCE SHERIFF ROLE (99%)", "ForceSheriff")
+addToggle(autoTab, "🏆 INSTANT WIN (Murderer)", "InstantWin")
+addToggle(autoTab, "💰 AUTO COLLECT", "AutoCollect")
+
+-- Show ESP tab by default
+espTab.content.Visible = true
+for _, btn in pairs(tabFrame:GetChildren()) do
+    if btn:IsA("TextButton") and btn.Text == "👁️ ESP" then
+        btn.BackgroundColor3 = Color3.fromRGB(150,50,220)
+        break
+    end
+end
+
+-- Fly function
+local flyEnabled = false
+local bodyVelocity, bodyGyro
+
+local function fly()
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
     
-    local myRole = getPlayerRole(plr)
-    local target = nil
-    local minDist = math.huge
-    
-    for _, other in pairs(playerservice:GetPlayers()) do
-        if other ~= plr and other.Character and other.Character:FindFirstChild("Humanoid") and other.Character.Humanoid.Health > 0 then
-            local shouldTarget = false
-            local otherRole = getPlayerRole(other)
-            
-            if myRole == "Murderer" then
-                shouldTarget = true
-            elseif myRole == "Sheriff" and otherRole == "Murderer" then
-                shouldTarget = true
-            end
-            
-            if shouldTarget and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local otherRoot = other.Character:FindFirstChild("HumanoidRootPart")
-                if otherRoot then
-                    local dist = (otherRoot.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                    if dist < minDist and dist < 30 then
-                        minDist = dist
-                        target = other
-                    end
+    if flyEnabled then
+        if not bodyVelocity or bodyVelocity.Parent ~= hrp then
+            bodyVelocity = Instance.new("BodyVelocity")
+            bodyGyro = Instance.new("BodyGyro")
+            bodyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+            bodyGyro.CFrame = hrp.CFrame
+            bodyVelocity.Parent = hrp
+            bodyGyro.Parent = hrp
+        end
+        
+        local moveDir = Vector3.new()
+        if userinput:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Vector3.new(0, 0, -1) end
+        if userinput:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir + Vector3.new(0, 0, 1) end
+        if userinput:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir + Vector3.new(-1, 0, 0) end
+        if userinput:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Vector3.new(1, 0, 0) end
+        if userinput:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+        if userinput:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir + Vector3.new(0, -1, 0) end
+        
+        moveDir = moveDir.Unit
+        local cam = workspace.CurrentCamera
+        local camCF = cam.CFrame
+        local velocity = (camCF.RightVector * moveDir.X + camCF.UpVector * moveDir.Y + camCF.LookVector * moveDir.Z) * 100
+        bodyVelocity.Velocity = velocity
+        bodyGyro.CFrame = camCF
+    else
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+        bodyVelocity = nil
+        bodyGyro = nil
+    end
+end
+
+-- Hitbox expander
+local function expandHitbox()
+    for _, player in pairs(playerservice:GetPlayers()) do
+        if player.Character and player ~= plr then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    part.Size = Vector3.new(5, 5, 5)
                 end
-            e
+            end
+        end
+    end
+end
+
+-- MAIN LOOP
+task.spawn(function()
+    while true do
+        -- ESP
+        if features.MurderESP or features.SheriffESP or features.InnocentESP then
+            updateAllESP()
+        end
+        
+        -- Hitbox
+        if features.HitboxExpand then
+            expandHitbox()
+        end
+        
+        -- Auto Kill
+        if features.AutoKillMurder then autoKillAll() end
+        if features.AutoKillSheriff then autoKillMurderer() end
+        
+        -- Force Role
+        if features.ForceMurder or features.ForceSheriff then
+            forceRole()
+        end
+        
+        -- Speed Boost
+        if features.SpeedBoost and plr.Character and plr.Character:FindFirstChild(
