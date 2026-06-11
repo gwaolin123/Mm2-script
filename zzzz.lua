@@ -1,5 +1,5 @@
--- Rivals Mobile GUI + ESP + Aimbot (Delta Android)
--- Aimbot fixed: uses CFrame and ViewportPointToRay for touch aiming
+-- Rivals Mobile GUI + ESP + Super Aimbot (Delta Android)
+-- Instant lock, infinite range, 360-degree FOV, hitscan precision
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,8 +9,8 @@ local LocalPlayer = Players.LocalPlayer
 
 local espEnabled = true
 local aimbotEnabled = true
-local aimFOV = 200
-local smoothness = 0.3
+local aimFOV = 360  -- Full 360 degrees
+local lockStrength = 1.0  -- Instant lock (no smoothing)
 
 -- Create GUI
 local screenGui = Instance.new("ScreenGui")
@@ -111,7 +111,7 @@ local function updateESP()
             local screenPos, depth = worldToScreen(rootPart.Position)
             if screenPos then
                 label.Position = UDim2.new(0, screenPos.X - 50, 0, screenPos.Y - 20)
-                label.Text = player.Name .. " | " .. string.format("%dm", math.floor(depth * 3.28))
+                label.Text = player.Name .. " | " .. string.format("%.0fm", depth * 3.28)
                 label.Visible = espEnabled
             else
                 label.Visible = false
@@ -133,20 +133,26 @@ local function createESP(player)
     espLabels[player] = label
 end
 
--- Aimbot: locks onto closest player to crosshair
-local function getClosestPlayerToCrosshair()
+-- SUPER AIMBOT: closest player regardless of distance or screen position
+local function getClosestPlayerAnywhere()
     local closest = nil
-    local closestDistance = aimFOV
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local closestAngle = math.rad(aimFOV)  -- Convert to radians for 3D angle
+    local cameraPos = Camera.CFrame.Position
+    local cameraDir = Camera.CFrame.LookVector
     
     for _, player in ipairs(getPlayers()) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local rootPart = player.Character.HumanoidRootPart
-            local screenPos, depth = worldToScreen(rootPart.Position)
-            if screenPos and depth > 0 then
-                local screenDist = (screenPos - center).Magnitude
-                if screenDist < closestDistance then
-                    closestDistance = screenDist
+            local targetPos = rootPart.Position
+            local toTarget = (targetPos - cameraPos).unit
+            local angle = math.acos(cameraDir:Dot(toTarget))
+            
+            -- Check if within FOV (360 degrees means always true)
+            local withinFOV = (aimFOV >= 360) or (angle <= math.rad(aimFOV / 2))
+            
+            if withinFOV then
+                if closest == nil or angle < closestAngle then
+                    closestAngle = angle
                     closest = player
                 end
             end
@@ -155,7 +161,7 @@ local function getClosestPlayerToCrosshair()
     return closest
 end
 
--- Aimbot execution: directly sets CFrame every frame
+-- INSTANT LOCK: no smoothing, immediate snap to target
 RunService.RenderStepped:Connect(function()
     -- ESP creation
     for _, player in ipairs(Players:GetPlayers()) do
@@ -165,18 +171,22 @@ RunService.RenderStepped:Connect(function()
     end
     updateESP()
     
-    -- Aimbot
+    -- SUPER AIMBOT
     if aimbotEnabled then
-        local target = getClosestPlayerToCrosshair()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = target.Character.HumanoidRootPart
-            -- Get target position (aim at head if exists)
-            local aimPart = target.Character:FindFirstChild("Head") or rootPart
-            local targetPos = aimPart.Position
-            local currentPos = Camera.CFrame.Position
-            local newCFrame = CFrame.new(currentPos, targetPos)
-            -- Smooth transition
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, smoothness)
+        local target = getClosestPlayerAnywhere()
+        if target and target.Character then
+            local aimPart = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+            if aimPart then
+                local targetPos = aimPart.Position
+                local currentPos = Camera.CFrame.Position
+                -- Direct instant lock
+                local newCFrame = CFrame.new(currentPos, targetPos)
+                if lockStrength >= 0.99 then
+                    Camera.CFrame = newCFrame  -- Instant snap
+                else
+                    Camera.CFrame = Camera.CFrame:Lerp(newCFrame, lockStrength)
+                end
+            end
         end
     end
 end)
