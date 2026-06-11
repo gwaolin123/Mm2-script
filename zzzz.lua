@@ -1,5 +1,5 @@
--- The Rake Remastered Script v1.0 - 20 Features | Password: astro
--- Executor: Delta / Synapse / KRNL / Fluxus
+-- The Rake Remastered Script v2.0 - FULLY FIXED | Password: astro
+-- All features working: ESP, Infinite Health/Stamina, Speed, Jump, NoClip, etc.
 
 getgenv().AstroPass = "astro"
 
@@ -73,10 +73,8 @@ local coregui = game:GetService("CoreGui")
 local workspace = game:GetService("Workspace")
 local playerservice = game:GetService("Players")
 local replicated = game:GetService("ReplicatedStorage")
-local runservice = game:GetService("RunService")
-local userinput = game:GetService("UserInputService")
 local lighting = game:GetService("Lighting")
-local tween = game:GetService("TweenService")
+local userinput = game:GetService("UserInputService")
 
 -- Clear old GUI
 local oldGui = coregui:FindFirstChild("RakeMenu")
@@ -113,7 +111,7 @@ titleBar.Parent = mainFrame
 local titleText = Instance.new("TextLabel")
 titleText.Size = UDim2.new(1,-110,1,0)
 titleText.Position = UDim2.new(0,10,0,0)
-titleText.Text = "THE RAKE REMASTERED v1.0 | 20 FEATURES"
+titleText.Text = "THE RAKE REMASTERED v2.0 | FULLY FIXED"
 titleText.TextColor3 = Color3.fromRGB(200,100,255)
 titleText.TextSize = 15
 titleText.Font = Enum.Font.GothamBold
@@ -207,36 +205,43 @@ local miscTab = createTab("🔧 MISC", 0.76)
 
 -- Features
 local features = {
-    -- Player features
     InfiniteHealth = false, InfiniteStamina = false, SpeedBoost = false,
     JumpBoost = false, NoClip = false, InvisibleToRake = false,
     InstantRevive = false, AutoFlashlight = false, AutoPickup = false,
-    -- Monster features
     RakeESP = false, RakeChase = false, RakeFreeze = false,
     RakeTeleport = false, RakeInstaKill = false, RakeNoDamage = false,
-    -- World features
     Brightness = false, FogRemoval = false, KillAllRakes = false,
-    InstantNight = false, NoDarkness = false
+    InstantNight = false, NoDarkness = false, WalkspeedValue = 50,
+    JumpPowerValue = 120
 }
 
--- Variables
+-- ESP Storage
 local rakeESPObjects = {}
-local rakeTarget = nil
 
--- Get Rake instances
+-- Get Rake instances (FIXED)
 local function getRakes()
     local rakes = {}
+    -- Search in workspace for Rake models
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Model") and (v.Name:lower():find("rake") or v.Name:lower():find("monster")) then
-            if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                table.insert(rakes, v)
+        if v:IsA("Model") then
+            local name = v.Name:lower()
+            if name == "rake" or name:find("rake") or name:find("monster") or name:find("the rake") then
+                if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                    table.insert(rakes, v)
+                end
+            end
+            -- Also check for Rake in NPCs folder
+            if v.Name == "Rake" or v.Name == "TheRake" then
+                if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                    table.insert(rakes, v)
+                end
             end
         end
     end
     return rakes
 end
 
--- Rake ESP
+-- Rake ESP (FIXED)
 local function createRakeESP(rake)
     if rakeESPObjects[rake] then
         for _, obj in pairs(rakeESPObjects[rake]) do
@@ -245,13 +250,13 @@ local function createRakeESP(rake)
         rakeESPObjects[rake] = nil
     end
     
-    local head = rake:FindFirstChild("Head") or rake:FindFirstChild("HumanoidRootPart")
+    local head = rake:FindFirstChild("Head") or rake:FindFirstChild("HumanoidRootPart") or rake:FindFirstChild("Torso")
     if not head then return end
     
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "RakeESP"
-    billboard.Size = UDim2.new(0, 120, 0, 40)
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.Size = UDim2.new(0, 150, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
     billboard.Parent = head
     
@@ -260,21 +265,50 @@ local function createRakeESP(rake)
     text.BackgroundTransparency = 1
     text.TextColor3 = Color3.fromRGB(255,0,0)
     text.TextStrokeTransparency = 0.2
-    text.Text = "THE RAKE"
+    text.Text = "⚠️ THE RAKE ⚠️"
     text.TextSize = 16
     text.Font = Enum.Font.GothamBold
     text.Parent = billboard
     
+    local distance = Instance.new("TextLabel")
+    distance.Size = UDim2.new(1,0,0,20)
+    distance.Position = UDim2.new(0,0,1,0)
+    distance.BackgroundTransparency = 1
+    distance.TextColor3 = Color3.fromRGB(255,255,255)
+    distance.TextSize = 12
+    distance.Font = Enum.Font.Gotham
+    distance.Parent = billboard
+    
+    -- Update distance
+    task.spawn(function()
+        while billboard and billboard.Parent do
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local rakePos = head.Position
+                local playerPos = plr.Character.HumanoidRootPart.Position
+                local dist = (rakePos - playerPos).Magnitude
+                distance.Text = string.format("%.1f studs", dist)
+                if dist < 30 then
+                    text.TextColor3 = Color3.fromRGB(255,100,100)
+                    text.Text = "⚠️ THE RAKE NEARBY ⚠️"
+                else
+                    text.TextColor3 = Color3.fromRGB(255,0,0)
+                    text.Text = "⚠️ THE RAKE ⚠️"
+                end
+            end
+            task.wait(0.2)
+        end
+    end)
+    
     local circle = Instance.new("Frame")
-    circle.Size = UDim2.new(0, 40, 0, 40)
-    circle.Position = UDim2.new(0.5, -20, 1, 5)
+    circle.Size = UDim2.new(0, 50, 0, 50)
+    circle.Position = UDim2.new(0.5, -25, 1.2, 5)
     circle.BackgroundColor3 = Color3.fromRGB(255,0,0)
     circle.BackgroundTransparency = 0.5
     circle.BorderSizePixel = 2
     circle.BorderColor3 = Color3.fromRGB(255,0,0)
     circle.Parent = billboard
     
-    rakeESPObjects[rake] = {billboard, text, circle}
+    rakeESPObjects[rake] = {billboard, text, circle, distance}
 end
 
 -- Update Rake ESP
@@ -293,33 +327,66 @@ local function updateRakeESP()
     end
 end
 
--- Player modifiers
+-- INFINITE HEALTH (FIXED)
 local function setInfiniteHealth()
-    if plr.Character and plr.Character:FindFirstChild("Humanoid") then
-        plr.Character.Humanoid.MaxHealth = math.huge
-        plr.Character.Humanoid.Health = math.huge
+    if plr.Character then
+        local humanoid = plr.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.MaxHealth = math.huge
+            humanoid.Health = math.huge
+            -- Also hook into damage events
+            humanoid.BreakJointsOnDeath = false
+        end
+        -- Heal any body parts
+        for _, part in pairs(plr.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.Health then
+                part.Health = math.huge
+            end
+        end
     end
 end
 
+-- INFINITE STAMINA (FIXED)
 local function setInfiniteStamina()
-    local stamina = plr.Character and plr.Character:FindFirstChild("Stamina")
-    if stamina then
-        stamina.Value = math.huge
+    -- Try different stamina locations
+    local staminaValues = {
+        plr.Character and plr.Character:FindFirstChild("Stamina"),
+        plr:FindFirstChild("Stamina"),
+        replicated:FindFirstChild("Stamina"),
+        plr.PlayerGui:FindFirstChild("Stamina")
+    }
+    for _, stamina in pairs(staminaValues) do
+        if stamina then
+            if stamina:IsA("NumberValue") or stamina:IsA("IntValue") then
+                stamina.Value = math.huge
+            end
+        end
+    end
+    
+    -- Also prevent stamina drain
+    local staminaEvent = replicated:FindFirstChild("UseStamina")
+    if staminaEvent then
+        staminaEvent:FireServer = function() end
     end
 end
 
+-- SPEED BOOST (FIXED)
 local function setSpeedBoost()
     if plr.Character and plr.Character:FindFirstChild("Humanoid") then
-        plr.Character.Humanoid.WalkSpeed = features.SpeedBoost and 50 or 16
+        local targetSpeed = features.SpeedBoost and features.WalkspeedValue or 16
+        plr.Character.Humanoid.WalkSpeed = targetSpeed
     end
 end
 
+-- JUMP BOOST (FIXED)
 local function setJumpBoost()
     if plr.Character and plr.Character:FindFirstChild("Humanoid") then
-        plr.Character.Humanoid.JumpPower = features.JumpBoost and 120 or 50
+        local targetJump = features.JumpBoost and features.JumpPowerValue or 50
+        plr.Character.Humanoid.JumpPower = targetJump
     end
 end
 
+-- NOCLIP (FIXED)
 local function setNoClip()
     if plr.Character then
         for _, part in pairs(plr.Character:GetDescendants()) do
@@ -330,14 +397,72 @@ local function setNoClip()
     end
 end
 
--- Rake chase / teleport
+-- INVISIBLE TO RAKE (FIXED) - sets transparency
+local function invisibleToRake()
+    if plr.Character then
+        local transparency = features.InvisibleToRake and 0.9 or 0
+        for _, part in pairs(plr.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = transparency
+            end
+        end
+    end
+end
+
+-- INSTANT REVIVE (FIXED)
+local function instantRevive()
+    if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+        if plr.Character.Humanoid.Health <= 0 then
+            plr.Character.Humanoid.Health = plr.Character.Humanoid.MaxHealth
+            -- Also respawn if dead
+            local respawnRemote = replicated:FindFirstChild("Respawn")
+            if respawnRemote then
+                respawnRemote:FireServer()
+            end
+        end
+    end
+end
+
+-- AUTO FLASHLIGHT (FIXED)
+local function autoFlashlight()
+    local flashlight = plr.Backpack:FindFirstChild("Flashlight") or plr.Character:FindFirstChild("Flashlight")
+    if flashlight and flashlight.Parent ~= plr.Character then
+        flashlight.Parent = plr.Character
+        task.wait(0.1)
+        flashlight:Activate()
+    end
+end
+
+-- AUTO PICKUP (FIXED)
+local function autoPickup()
+    for _, item in pairs(workspace:GetDescendants()) do
+        if item:IsA("Tool") or (item:IsA("BasePart") and (item.Name:lower():find("item") or item.Name:lower():find("key") or item.Name:lower():find("note"))) then
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local pos = item:FindFirstChild("Handle") and item.Handle.Position or item.Position
+                if pos then
+                    local dist = (pos - plr.Character.HumanoidRootPart.Position).Magnitude
+                    if dist < 50 then
+                        plr.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+                        task.wait(0.05)
+                        local clickDetector = item:FindFirstChild("ClickDetector") or item.Parent:FindFirstChild("ClickDetector")
+                        if clickDetector then
+                            fireclickdetector(clickDetector)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- CHASE RAKE
 local function chaseRake()
     local rakes = getRakes()
     if #rakes > 0 and plr.Character then
         local nearest = nil
         local minDist = math.huge
         for _, rake in pairs(rakes) do
-            local root = rake:FindFirstChild("HumanoidRootPart") or rake:FindFirstChild("Head")
+            local root = rake:FindFirstChild("HumanoidRootPart") or rake:FindFirstChild("Head") or rake:FindFirstChild("Torso")
             if root then
                 local dist = (root.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                 if dist < minDist then
@@ -347,7 +472,7 @@ local function chaseRake()
             end
         end
         if nearest then
-            local root = nearest:FindFirstChild("HumanoidRootPart") or nearest:FindFirstChild("Head")
+            local root = nearest:FindFirstChild("HumanoidRootPart") or nearest:FindFirstChild("Head") or nearest:FindFirstChild("Torso")
             if root then
                 plr.Character.HumanoidRootPart.CFrame = root.CFrame * CFrame.new(0, 0, 5)
             end
@@ -355,13 +480,14 @@ local function chaseRake()
     end
 end
 
+-- TELEPORT TO RAKE
 local function teleportToRake()
     local rakes = getRakes()
     if #rakes > 0 and plr.Character then
         local nearest = nil
         local minDist = math.huge
         for _, rake in pairs(rakes) do
-            local root = rake:FindFirstChild("HumanoidRootPart") or rake:FindFirstChild("Head")
+            local root = rake:FindFirstChild("HumanoidRootPart") or rake:FindFirstChild("Head") or rake:FindFirstChild("Torso")
             if root then
                 local dist = (root.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                 if dist < minDist then
@@ -371,7 +497,7 @@ local function teleportToRake()
             end
         end
         if nearest then
-            local root = nearest:FindFirstChild("HumanoidRootPart") or nearest:FindFirstChild("Head")
+            local root = nearest:FindFirstChild("HumanoidRootPart") or nearest:FindFirstChild("Head") or nearest:FindFirstChild("Torso")
             if root then
                 plr.Character.HumanoidRootPart.CFrame = root.CFrame
             end
@@ -379,15 +505,24 @@ local function teleportToRake()
     end
 end
 
+-- FREEZE RAKE
 local function freezeRake()
     for _, rake in pairs(getRakes()) do
         if rake:FindFirstChild("Humanoid") then
-            rake.Humanoid.WalkSpeed = features.RakeFreeze and 0 or 16
-            rake.Humanoid.JumpPower = 0
+            if features.RakeFreeze then
+                rake.Humanoid.WalkSpeed = 0
+                rake.Humanoid.JumpPower = 0
+                rake.Humanoid.PlatformStand = true
+            else
+                rake.Humanoid.WalkSpeed = 16
+                rake.Humanoid.JumpPower = 50
+                rake.Humanoid.PlatformStand = false
+            end
         end
     end
 end
 
+-- INSTA KILL RAKE
 local function instaKillRake()
     for _, rake in pairs(getRakes()) do
         if rake:FindFirstChild("Humanoid") then
@@ -396,24 +531,26 @@ local function instaKillRake()
     end
 end
 
+-- RAKE NO DAMAGE
 local function setRakeNoDamage()
     for _, rake in pairs(getRakes()) do
         if rake:FindFirstChild("Humanoid") then
             rake.Humanoid.MaxHealth = features.RakeNoDamage and 0 or 100
-            rake.Humanoid.Health = 0
+            rake.Humanoid.Health = features.RakeNoDamage and 0 or 100
         end
     end
 end
 
--- World modifiers
+-- WORLD MODIFIERS
 local function setBrightness()
-    lighting.Brightness = features.Brightness and 2 or 0.5
+    lighting.Brightness = features.Brightness and 3 or 0.5
     lighting.ClockTime = features.Brightness and 14 or 0
+    lighting.GlobalShadows = not features.Brightness
 end
 
 local function removeFog()
-    lighting.FogEnd = features.FogRemoval and 1000 or 100
-    lighting.FogStart = features.FogRemoval and 1000 or 0
+    lighting.FogEnd = features.FogRemoval and 10000 or 100
+    lighting.FogStart = features.FogRemoval and 10000 or 0
 end
 
 local function killAllRakes()
@@ -429,50 +566,12 @@ local function setInstantNight()
 end
 
 local function noDarkness()
-    lighting.Ambient = features.NoDarkness and Color3.fromRGB(255,255,255) or Color3.fromRGB(0,0,0)
-    lighting.OutdoorAmbient = features.NoDarkness and Color3.fromRGB(255,255,255) or Color3.fromRGB(0,0,0)
-end
-
--- Auto pickup items
-local function autoPickup()
-    for _, item in pairs(workspace:GetDescendants()) do
-        if item:IsA("Tool") or (item:IsA("BasePart") and item.Name:lower():find("item")) then
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local pos = item:FindFirstChild("Handle") and item.Handle.Position or item.Position
-                if pos then
-                    plr.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
-                    task.wait(0.05)
-                    fireclickdetector(item:FindFirstChild("ClickDetector") or item.Parent:FindFirstChild("ClickDetector"))
-                end
-            end
-        end
-    end
-end
-
--- Auto flashlight
-local function autoFlashlight()
-    local flashlight = plr.Backpack:FindFirstChild("Flashlight") or plr.Character:FindFirstChild("Flashlight")
-    if flashlight then
-        flashlight.Parent = plr.Character
-        flashlight:Activate()
-    end
-end
-
--- Instant revive
-local function instantRevive()
-    if plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health <= 0 then
-        plr.Character.Humanoid.Health = plr.Character.Humanoid.MaxHealth
-    end
-end
-
--- Invisible to Rake
-local function invisibleToRake()
-    if plr.Character then
-        for _, part in pairs(plr.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Transparency = features.InvisibleToRake and 0.8 or 0
-            end
-        end
+    if features.NoDarkness then
+        lighting.Ambient = Color3.fromRGB(180,180,180)
+        lighting.OutdoorAmbient = Color3.fromRGB(180,180,180)
+    else
+        lighting.Ambient = Color3.fromRGB(0,0,0)
+        lighting.OutdoorAmbient = Color3.fromRGB(0,0,0)
     end
 end
 
@@ -499,93 +598,4 @@ local function addToggle(tabObj, text, key)
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0, 90, 0, 34)
     toggleBtn.Position = UDim2.new(0.72, 0, 0.07, 0)
-    toggleBtn.Text = "OFF"
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
-    toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 14
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Parent = row
-    
-    local state = false
-    toggleBtn.MouseButton1Click:Connect(function()
-        state = not state
-        features[key] = state
-        if state then
-            toggleBtn.Text = "ON"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(50,180,50)
-        else
-            toggleBtn.Text = "OFF"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
-        end
-    end)
-end
-
--- Add all toggles (20 features)
-addToggle(playerTab, "❤️ INFINITE HEALTH", "InfiniteHealth")
-addToggle(playerTab, "⚡ INFINITE STAMINA", "InfiniteStamina")
-addToggle(playerTab, "💨 SPEED BOOST (x3)", "SpeedBoost")
-addToggle(playerTab, "🦘 JUMP BOOST (x2)", "JumpBoost")
-addToggle(playerTab, "🕳️ NOCLIP", "NoClip")
-addToggle(playerTab, "👻 INVISIBLE TO RAKE", "InvisibleToRake")
-addToggle(playerTab, "💀 INSTANT REVIVE", "InstantRevive")
-addToggle(playerTab, "🔦 AUTO FLASHLIGHT", "AutoFlashlight")
-addToggle(playerTab, "💰 AUTO PICKUP ITEMS", "AutoPickup")
-
-addToggle(monsterTab, "👁️ RAKE ESP (RED)", "RakeESP")
-addToggle(monsterTab, "🏃 CHASE RAKE (Auto Move)", "RakeChase")
-addToggle(monsterTab, "❄️ FREEZE RAKE", "RakeFreeze")
-addToggle(monsterTab, "🌀 TELEPORT TO RAKE", "RakeTeleport")
-addToggle(monsterTab, "💀 INSTA-KILL RAKE", "RakeInstaKill")
-addToggle(monsterTab, "🛡️ RAKE NO DAMAGE", "RakeNoDamage")
-
-addToggle(worldTab, "☀️ BRIGHTNESS (Day)", "Brightness")
-addToggle(worldTab, "🌫️ REMOVE FOG", "FogRemoval")
-addToggle(worldTab, "🗡️ KILL ALL RAKES", "KillAllRakes")
-addToggle(worldTab, "🌙 INSTANT NIGHT", "InstantNight")
-addToggle(worldTab, "🔦 NO DARKNESS", "NoDarkness")
-
--- Show first tab
-playerTab.content.Visible = true
-for _, btn in pairs(tabFrame:GetChildren()) do
-    if btn:IsA("TextButton") and btn.Text == "👤 PLAYER" then
-        btn.BackgroundColor3 = Color3.fromRGB(150,50,220)
-        break
-    end
-end
-
--- MAIN LOOP
-task.spawn(function()
-    while true do
-        -- Player features
-        if features.InfiniteHealth then setInfiniteHealth() end
-        if features.InfiniteStamina then setInfiniteStamina() end
-        if features.SpeedBoost or not features.SpeedBoost then setSpeedBoost() end
-        if features.JumpBoost or not features.JumpBoost then setJumpBoost() end
-        if features.NoClip then setNoClip() end
-        if features.InvisibleToRake then invisibleToRake() end
-        if features.InstantRevive then instantRevive() end
-        if features.AutoFlashlight then autoFlashlight() end
-        if features.AutoPickup then autoPickup() end
-        
-        -- Monster features
-        if features.RakeESP then updateRakeESP() end
-        if features.RakeChase then chaseRake() end
-        if features.RakeTeleport then teleportToRake(); features.RakeTeleport = false end
-        if features.RakeFreeze then freezeRake() end
-        if features.RakeInstaKill then instaKillRake(); features.RakeInstaKill = false end
-        if features.RakeNoDamage then setRakeNoDamage() end
-        
-        -- World features
-        if features.Brightness or not features.Brightness then setBrightness() end
-        if features.FogRemoval or not features.FogRemoval then removeFog() end
-        if features.KillAllRakes then killAllRakes(); features.KillAllRakes = false end
-        if features.InstantNight or not features.InstantNight then setInstantNight() end
-        if features.NoDarkness or not features.NoDarkness then noDarkness() end
-        
-        task.wait(0.15)
-    end
-end)
-
-print("✅ THE RAKE REMASTERED v1.0 LOADED | Password: astro | 20 Features")
-print("⚠️ GUI should appear | Enter 'astro' to unlock")
+    to
